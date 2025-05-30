@@ -4,12 +4,17 @@ import type { LocationInfo } from 'h5-native-bridge';
 import dd from "dingtalk-jsapi";
 import { NavBar, Space, Toast } from "antd-mobile";
 import { useNavigate } from 'react-router-dom';
-
+import {
+  useRouteAnimation,
+  animationPresets,
+  getDeviceType,
+} from "../hooks/useRouteAnimation";
 const LocationPanel = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [location, setLocation] = useState<LocationInfo | null>(null);
   const navigate= useNavigate()
+  const { setAnimationType } = useRouteAnimation();
   const getLocation = () => {
     setStatus('loading');
     setErrorMessage('');
@@ -38,7 +43,11 @@ console.log('获取位置成功:', location);
     >
       <NavBar
         onBack={() => {
-          navigate(-1);
+          setAnimationType('fade');
+          setTimeout(() => {
+            navigate(-1);
+          }, 100);
+        
         }}
       >
         位置服务

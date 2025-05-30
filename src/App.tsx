@@ -5,15 +5,21 @@ import DevicePanel from "./components/DevicePanel";
 import WatchLocationPanel from "./components/WatchLocationPanel";
 import DebugControls from "./components/DebugControls";
 import GestureRouteTransition from "./components/GestureRouteTransition";
+import AnimationController from "./components/AnimationController";
 import VConsole from "vconsole";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Button, NavBar } from "antd-mobile";
 
 // 导入桥接库
 import nativeBridge from "h5-native-bridge";
+import NavigatePanel from "./components/NavigationPanel";
 
 // 首页组件
-const HomePage = () => {
+const HomePage = ({
+  setShowAnimationController,
+}: {
+  setShowAnimationController: (show: boolean) => void;
+}) => {
   const navigate = useNavigate();
 
   const navigationItems = [
@@ -40,6 +46,14 @@ const HomePage = () => {
       icon: "📸",
       path: "/watch",
       color: "#f72585",
+    },
+    {
+      id: "navigation",
+      title: "模拟路由",
+      description: "路由演示",
+      icon: "👂🏻",
+      path: "/navigate",
+      color: "#f98335",
     },
   ];
 
@@ -85,6 +99,21 @@ const HomePage = () => {
         >
           <h2 style={{ margin: "0 0 8px 0", fontSize: "24px" }}>功能演示</h2>
           <p style={{ margin: 0, opacity: 0.8 }}>点击下方按钮体验各项功能</p>
+
+          {/* 首页动画控制按钮 */}
+          <Button
+            size="small"
+            fill="outline"
+            onClick={() => setShowAnimationController(true)}
+            style={{
+              marginTop: "12px",
+              color: "white",
+              borderColor: "rgba(255,255,255,0.5)",
+              background: "rgba(255,255,255,0.1)",
+            }}
+          >
+            🎨 动画设置
+          </Button>
         </div>
 
         {navigationItems.map((item) => (
@@ -196,6 +225,7 @@ const HomePage = () => {
 function App() {
   const [bridgeReady, setBridgeReady] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [showAnimationController, setShowAnimationController] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -241,25 +271,68 @@ function App() {
     alert(`已安装的插件: ${plugins.join(", ")}`);
   };
 
+  // 显示动画控制器
+  const showAnimationPanel = () => {
+    setShowAnimationController(true);
+  };
+
   return (
     <div className="app-container" style={{ padding: 0, maxWidth: "none" }}>
       <GestureRouteTransition enableGesture={true}>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/"
+            element={
+              <HomePage
+                setShowAnimationController={setShowAnimationController}
+              />
+            }
+          />
           <Route path="/location" element={<LocationPanel />} />
           <Route path="/device" element={<DevicePanel />} />
           <Route path="/watch" element={<WatchLocationPanel />} />
+          <Route path="/navigate" element={<NavigatePanel />} />
         </Routes>
       </GestureRouteTransition>
 
       {/* 调试控制面板 - 只在非首页显示 */}
       {location.pathname !== "/" && (
-        <DebugControls
-          debugMode={debugMode}
-          onToggleDebug={toggleDebugMode}
-          onShowPlugins={printPlugins}
-        />
+        <>
+          <DebugControls
+            debugMode={debugMode}
+            onToggleDebug={toggleDebugMode}
+            onShowPlugins={printPlugins}
+          />
+
+          {/* 动画控制按钮 */}
+          <div
+            style={{
+              position: "fixed",
+              bottom: "20px",
+              left: "20px",
+              zIndex: 1000,
+            }}
+          >
+            <Button
+              size="small"
+              color="primary"
+              onClick={showAnimationPanel}
+              style={{
+                borderRadius: "20px",
+                padding: "8px 16px",
+              }}
+            >
+              🎨 动画
+            </Button>
+          </div>
+        </>
       )}
+
+      {/* 动画控制面板 */}
+      <AnimationController
+        visible={showAnimationController}
+        onClose={() => setShowAnimationController(false)}
+      />
     </div>
   );
 }
