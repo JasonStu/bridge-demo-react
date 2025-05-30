@@ -40,7 +40,7 @@ const GestureRouteTransition: React.FC<GestureRouteTransitionProps> = ({
     },
   };
 
-  const { animationType, isAnimating, direction } =
+  const { animationType, isAnimating, direction ,} =
     useRouteAnimation(animationConfig);
 
   // 手势相关状态 - 简化状态管理
@@ -162,6 +162,7 @@ const GestureRouteTransition: React.FC<GestureRouteTransitionProps> = ({
     isAnimating,
   ]);
 	 console.log("location.animationType====>", animationType);
+	 
 	 
 
   return (

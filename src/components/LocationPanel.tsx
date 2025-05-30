@@ -1,37 +1,45 @@
-import { useState } from 'react';
-import nativeBridge from 'h5-native-bridge';
-import type { LocationInfo } from 'h5-native-bridge';
+import { useState } from "react";
+import nativeBridge from "h5-native-bridge";
+import type { LocationInfo } from "h5-native-bridge";
 import dd from "dingtalk-jsapi";
 import { NavBar, Space, Toast } from "antd-mobile";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import {
   useRouteAnimation,
   animationPresets,
   getDeviceType,
 } from "../hooks/useRouteAnimation";
+
 const LocationPanel = () => {
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [location, setLocation] = useState<LocationInfo | null>(null);
-  const navigate= useNavigate()
-  const { setAnimationType } = useRouteAnimation();
+  const navigate = useNavigate();
+  const { goBack } = useRouteAnimation();
   const getLocation = () => {
-    setStatus('loading');
-    setErrorMessage('');
-    
-    nativeBridge.getLocation({
-      enableHighAccuracy: true,
-      timeout: 8000,
-      
-    }).then((location) => { 
-console.log('获取位置成功:', location);
-			setLocation(location);
-      setStatus('success');
-			
-    })
-		.catch(error => {
-			setErrorMessage(error.message);
-		});
+    setStatus("loading");
+    setErrorMessage("");
+
+    nativeBridge
+      .getLocation({
+        enableHighAccuracy: true,
+        timeout: 8000,
+      })
+      .then((location) => {
+        console.log("获取位置成功:", location);
+        setLocation(location);
+        setStatus("success");
+      })
+      .catch((error) => {
+        setErrorMessage(error.message);
+      });
+  };
+
+  // 处理返回导航
+  const handleGoBack = () => {
+    goBack("fade");
   };
 
   return (
@@ -41,17 +49,7 @@ console.log('获取位置成功:', location);
         height: "100vh",
       }}
     >
-      <NavBar
-        onBack={() => {
-          setAnimationType('fade');
-          setTimeout(() => {
-            navigate(-1);
-          }, 100);
-        
-        }}
-      >
-        位置服务
-      </NavBar>
+      <NavBar onBack={handleGoBack}>位置服务</NavBar>
 
       <div className="panel">
         <div className="panel-header">

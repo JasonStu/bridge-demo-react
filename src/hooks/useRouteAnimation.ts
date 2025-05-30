@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export type AnimationType =
   | "page"
@@ -15,7 +16,6 @@ interface RouteAnimationOptions {
   routeAnimations?: Record<string, AnimationType>;
   enableGesture?: boolean;
   animationDuration?: number;
-  // 新增：前进和后退动画配置
   forwardAnimation?: AnimationType;
   backwardAnimation?: AnimationType;
 }
@@ -26,163 +26,296 @@ interface RouteAnimationState {
   direction: "forward" | "backward";
 }
 
+// 全局路由动画状态管理
+class RouteAnimationManager {
+  private static instance: RouteAnimationManager;
+  private listeners: Array<(state: RouteAnimationState) => void> = [];
+  private currentState: RouteAnimationState = {
+    animationType: "page",
+    isAnimating: false,
+    direction: "forward",
+  };
+  private routeHistory: string[] = [];
+
+  static getInstance(): RouteAnimationManager {
+    if (!RouteAnimationManager.instance) {
+      RouteAnimationManager.instance = new RouteAnimationManager();
+    }
+    return RouteAnimationManager.instance;
+  }
+
+  subscribe(listener: (state: RouteAnimationState) => void) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((listener) => listener(this.currentState));
+  }
+
+  // 预设动画 - 在路由变化前调用
+  presetAnimation(
+    animationType: AnimationType,
+    direction: "forward" | "backward"
+  ) {
+    console.log(`[全局预设] 动画: ${animationType}, 方向: ${direction}`);
+    this.currentState = {
+      animationType,
+      isAnimating: true,
+      direction,
+    };
+    this.notify();
+  }
+
+  // 路由变化时调用
+  onRouteChange(
+    newPath: string,
+    navType: string,
+    options: RouteAnimationOptions
+  ) {
+    const {
+      forwardAnimation = "page",
+      backwardAnimation = "fade",
+      routeAnimations = {},
+    } = options;
+
+    console.log(`[路由变化] 路径: ${newPath}, 导航类型: ${navType}`);
+
+    // 如果动画已经被预设，直接使用预设的动画
+    if (this.currentState.isAnimating) {
+      console.log(`[使用预设] 动画: ${this.currentState.animationType}`);
+      this.updateHistory(newPath, this.currentState.direction);
+      return;
+    }
+
+    // 自动判断方向和动画
+    const direction = this.determineDirection(newPath, navType);
+    const animationType =
+      routeAnimations[newPath] ||
+      (direction === "backward" ? backwardAnimation : forwardAnimation);
+
+    console.log(`[自动判断] 方向: ${direction}, 动画: ${animationType}`);
+
+    this.currentState = {
+      animationType,
+      isAnimating: true,
+      direction,
+    };
+
+    this.updateHistory(newPath, direction);
+    this.notify();
+  }
+
+  private determineDirection(
+    newPath: string,
+    navType: string
+  ): "forward" | "backward" {
+    // POP 一定是后退
+    if (navType === "POP") {
+      return "backward";
+    }
+
+    // 检查是否在历史中存在
+    const lastIndex = this.routeHistory.lastIndexOf(newPath);
+    if (lastIndex >= 0 && lastIndex < this.routeHistory.length - 1) {
+      return "backward";
+    }
+
+    // 基于层级判断
+    const routeHierarchy: Record<string, number> = {
+      "/": 0,
+      "/location": 1,
+      "/device": 1,
+      "/watch": 1,
+    };
+
+    const currentPath = this.routeHistory[this.routeHistory.length - 1] || "/";
+    const currentLevel = routeHierarchy[currentPath] || 1;
+    const newLevel = routeHierarchy[newPath] || 1;
+
+    return newLevel < currentLevel ? "backward" : "forward";
+  }
+
+  private updateHistory(newPath: string, direction: "forward" | "backward") {
+    if (direction === "forward") {
+      this.routeHistory.push(newPath);
+    } else {
+      const index = this.routeHistory.lastIndexOf(newPath);
+      if (index >= 0) {
+        this.routeHistory = this.routeHistory.slice(0, index + 1);
+      }
+    }
+    console.log(`[历史更新] [${this.routeHistory.join(" -> ")}]`);
+  }
+
+  finishAnimation() {
+    this.currentState = {
+      ...this.currentState,
+      isAnimating: false,
+    };
+    this.notify();
+  }
+
+  getCurrentState() {
+    return this.currentState;
+  }
+
+  initializeHistory(initialPath: string) {
+    if (this.routeHistory.length === 0) {
+      this.routeHistory = [initialPath];
+      console.log(`[初始化历史] ${initialPath}`);
+    }
+  }
+}
+
 export const useRouteAnimation = (options: RouteAnimationOptions = {}) => {
   const {
     defaultAnimation = "page",
     routeAnimations = {},
     enableGesture = true,
     animationDuration = 300,
-    // 设置前进和后退的默认动画
     forwardAnimation = "page",
     backwardAnimation = "fade",
   } = options;
 
   const location = useLocation();
   const navigationType = useNavigationType();
+  const navigate = useNavigate();
 
-  const [animationState, setAnimationState] = useState<RouteAnimationState>({
-    animationType: defaultAnimation,
-    isAnimating: false,
-    direction: "forward",
-  });
-
-  // 使用 ref 来存储前一个路径和导航历史
-  const previousPathRef = useRef<string>("/");
-
-  // 路由层级定义
-  const routeHierarchy = useRef<Record<string, number>>({
-    "/": 0,
-    "/location": 1,
-    "/device": 1,
-    "/watch": 1,
-  });
-
-  // 简化的方向判断逻辑 - 重点关注 navigationType
-  const getNavigationDirection = useCallback(
-    (
-      currentPath: string,
-      previousPath: string,
-      navType: string
-    ): "forward" | "backward" => {
-      const currentLevel = routeHierarchy.current[currentPath] || 1;
-      const previousLevel = routeHierarchy.current[previousPath] || 0;
-
-      console.log(
-        `[方向判断] 导航类型: ${navType}, 路径: ${previousPath} -> ${currentPath}, 层级: ${previousLevel} -> ${currentLevel}`
-      );
-
-      // 1. 最重要：navigationType 为 POP 一定是后退
-      if (navType === "POP") {
-        console.log(`[方向判断] POP 导航 -> 后退`);
-        return "backward";
-      }
-
-      // 2. navigationType 为 PUSH 且层级上升，是前进
-      if (navType === "PUSH" && currentLevel > previousLevel) {
-        console.log(`[方向判断] PUSH 导航且层级上升 -> 前进`);
-        return "forward";
-      }
-
-      // 3. 根据层级判断
-      if (currentLevel < previousLevel) {
-        console.log(`[方向判断] 层级下降 -> 后退`);
-        return "backward";
-      }
-
-      // 4. 默认为前进
-      console.log(`[方向判断] 默认 -> 前进`);
-      return "forward";
-    },
-    []
+  const manager = RouteAnimationManager.getInstance();
+  const [animationState, setAnimationState] = useState<RouteAnimationState>(
+    () => manager.getCurrentState()
   );
 
-  // 获取动画类型
-  const getAnimationType = useCallback(
-    (currentPath: string, direction: "forward" | "backward"): AnimationType => {
-      // 优先使用路由特定动画
-      if (routeAnimations[currentPath]) {
-        console.log(
-          `[动画选择] 使用路由特定动画: ${routeAnimations[currentPath]}`
-        );
-        return routeAnimations[currentPath];
-      }
+  const currentPathRef = useRef<string>("");
+  const animationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializedRef = useRef(false);
 
-      // 根据方向选择动画
-      if (direction === "backward") {
-        console.log(`[动画选择] 后退方向 -> ${backwardAnimation}`);
-        return backwardAnimation; // 后退使用fade
-      } else {
-        console.log(`[动画选择] 前进方向 -> ${forwardAnimation}`);
-        return forwardAnimation; // 前进使用page
-      }
-    },
-    [routeAnimations, forwardAnimation, backwardAnimation]
-  );
+  // 订阅全局状态变化
+  useEffect(() => {
+    const unsubscribe = manager.subscribe(setAnimationState);
+    return unsubscribe;
+  }, []);
 
   // 监听路由变化
   useEffect(() => {
     const currentPath = location.pathname;
-    const previousPath = previousPathRef.current;
 
-    console.log(`\n=== 路由变化检测 ===`);
-    console.log(`路径变化: ${previousPath} -> ${currentPath}`);
-    console.log(`导航类型: ${navigationType}`);
+    // 初始化
+    if (!isInitializedRef.current) {
+      manager.initializeHistory(currentPath);
+      currentPathRef.current = currentPath;
+      isInitializedRef.current = true;
+      return;
+    }
 
-    // 只有路径真正改变时才更新
-    if (currentPath !== previousPath) {
-      // 判断导航方向
-      const direction = getNavigationDirection(
-        currentPath,
-        previousPath,
-        navigationType
+    // 路径变化时通知管理器
+    if (currentPath !== currentPathRef.current) {
+      console.log(
+        `\n📍 检测到路由变化: ${currentPathRef.current} -> ${currentPath}`
       );
 
-      // 获取动画类型
-      const animationType = getAnimationType(currentPath, direction);
-
-      console.log(`\n🎬 最终结果:`);
-      console.log(`- 方向: ${direction}`);
-      console.log(`- 动画: ${animationType}`);
-      console.log(`===================\n`);
-
-      setAnimationState({
-        animationType,
-        isAnimating: true,
-        direction,
+      manager.onRouteChange(currentPath, navigationType, {
+        forwardAnimation,
+        backwardAnimation,
+        routeAnimations,
       });
 
-      // 更新前一个路径
-      previousPathRef.current = currentPath;
+      currentPathRef.current = currentPath;
 
-      // 动画完成后重置状态
-      const timer = setTimeout(() => {
-        setAnimationState((prev) => ({ ...prev, isAnimating: false }));
+      // 清除之前的定时器
+      if (animationTimerRef.current) {
+        clearTimeout(animationTimerRef.current);
+      }
+
+      // 设置动画完成定时器
+      animationTimerRef.current = setTimeout(() => {
+        manager.finishAnimation();
       }, animationDuration);
-
-      return () => clearTimeout(timer);
     }
+
+    return () => {
+      if (animationTimerRef.current) {
+        clearTimeout(animationTimerRef.current);
+      }
+    };
   }, [
     location.pathname,
     navigationType,
-    getNavigationDirection,
-    getAnimationType,
+    forwardAnimation,
+    backwardAnimation,
+    routeAnimations,
     animationDuration,
   ]);
 
-  // 手动设置动画类型
-  const setAnimationType = useCallback((type: AnimationType) => {
-    setAnimationState((prev) => ({ ...prev, animationType: type }));
-  }, []);
+  // 增强的后退函数
+  const goBack = useCallback(
+    (animation?: AnimationType) => {
+      const backAnimation = animation || backwardAnimation;
+      console.log(`[预设后退] 动画: ${backAnimation}`);
 
-  // 预加载路由组件（性能优化）
-  const preloadRoute = useCallback((path: string) => {
-    console.log(`预加载路由: ${path}`);
-  }, []);
+      // 先预设动画，再执行导航
+      manager.presetAnimation(backAnimation, "backward");
+
+      // 稍微延迟执行，确保状态更新
+      setTimeout(() => {
+        navigate(-1);
+      }, 16);
+    },
+    [navigate, backwardAnimation]
+  );
+
+  // 增强的导航函数
+  const enhancedNavigate = useCallback(
+    (
+      to: string | number,
+      options?: {
+        replace?: boolean;
+        state?: any;
+        animation?: AnimationType;
+        direction?: "forward" | "backward";
+      }
+    ) => {
+      if (options?.animation) {
+        console.log(`[预设导航] 目标: ${to}, 动画: ${options.animation}`);
+        manager.presetAnimation(
+          options.animation,
+          options.direction || "forward"
+        );
+
+        setTimeout(() => {
+          if (typeof to === "number") {
+            navigate(to);
+          } else {
+            navigate(to, { replace: options?.replace, state: options?.state });
+          }
+        }, 16);
+      } else {
+        if (typeof to === "number") {
+          navigate(to);
+        } else {
+          navigate(to, { replace: options?.replace, state: options?.state });
+        }
+      }
+    },
+    [navigate]
+  );
+
+  // 手动设置动画类型
+  const setAnimationType = useCallback(
+    (type: AnimationType) => {
+      manager.presetAnimation(type, animationState.direction);
+    },
+    [animationState.direction]
+  );
 
   return {
     ...animationState,
     setAnimationType,
-    preloadRoute,
+    enhancedNavigate,
+    goBack,
     enableGesture,
   };
 };
@@ -197,6 +330,8 @@ export const animationPresets = {
     },
     enableGesture: true,
     animationDuration: 250,
+    forwardAnimation: "page" as AnimationType,
+    backwardAnimation: "fade" as AnimationType,
   },
 
   // 桌面端动画
@@ -205,6 +340,8 @@ export const animationPresets = {
     routeAnimations: {},
     enableGesture: false,
     animationDuration: 200,
+    forwardAnimation: "fade" as AnimationType,
+    backwardAnimation: "fade" as AnimationType,
   },
 
   // 无动画模式
@@ -213,6 +350,8 @@ export const animationPresets = {
     routeAnimations: {},
     enableGesture: false,
     animationDuration: 0,
+    forwardAnimation: "fade" as AnimationType,
+    backwardAnimation: "fade" as AnimationType,
   },
 };
 
