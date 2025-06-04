@@ -4,9 +4,14 @@ import type { NativeResponse } from 'h5-native-bridge';
 import dd,{} from "dingtalk-jsapi"
 import { NavBar, Space, Toast } from "antd-mobile";
 import { useNavigate } from "react-router-dom";
+import {
+  useRouteAnimation,
+  animationPresets,
+  getDeviceType,
+} from "../hooks/useRouteAnimation";
 const DevicePanel = () => {
   const navigate = useNavigate();
-
+  const { goBack } = useRouteAnimation();
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [wifiList, setWifiList] = useState<any[] | null>(null);
@@ -46,7 +51,7 @@ const DevicePanel = () => {
     >
       <NavBar
         onBack={() => {
-          navigate(-1);
+          goBack();
         }}
       >
         wifi信息

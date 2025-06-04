@@ -1,9 +1,15 @@
-import { useState, useEffect } from 'react';
-import nativeBridge from 'h5-native-bridge';
-import type { LocationInfo } from 'h5-native-bridge';
-import src from '../../node_modules/vite/client.d';
-import { NavBar, Space, Toast,Image, } from "antd-mobile";
+import { useState, useEffect } from "react";
+import nativeBridge from "h5-native-bridge";
+import type { LocationInfo } from "h5-native-bridge";
+import src from "../../node_modules/vite/client.d";
+import { NavBar, Space, Toast, Image } from "antd-mobile";
 import { useNavigate } from "react-router-dom";
+import {
+  useRouteAnimation,
+  animationPresets,
+  getDeviceType,
+} from "../hooks/useRouteAnimation";
+import bgImage from "../assets/bg_image.png";
 interface LocationRecord extends LocationInfo {
   timestamp: number;
   formattedTime: string;
@@ -11,31 +17,41 @@ interface LocationRecord extends LocationInfo {
 
 const WatchLocationPanel = () => {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [location, setLocation] = useState<string | null>(null);
-  const [imgUrl ,setImgUrl] = useState<string>('https://res.wx.qq.com/wxdoc/dist/assets/img/vConsole-game.e52b59be.jpg');
+  const [imgUrl, setImgUrl] = useState<string>(
+    "https://res.wx.qq.com/wxdoc/dist/assets/img/vConsole-game.e52b59be.jpg"
+  );
   const demoSrc =
     "https://images.unsplash.com/photo-1567945716310-4745a6b7844b?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1500&q=60";
   const demoSrc2 =
     "https://images.unsplash.com/photo-1620476214170-1d8080f65cdb?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=3150&q=80";
+  const demoSrc3 =
+    "https://images.unsplash.com/photo-1567945716310-4745a6b7844b?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=3000&q=60";
+  const demoSrc4 =
+    "https://images.unsplash.com/photo-1567945716310-4745a6b7844b?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=6000&q=60";
+  const demoSrc5 =
+    "https://images.unsplash.com/photo-1567945716310-4745a6b7844b?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=9000&q=60";
+  const { goBack } = useRouteAnimation();
 
   const getLocation = () => {
-    setStatus('loading');
-    setErrorMessage('');
-    
-    nativeBridge.saveImage({
-      url:imgUrl
-      
-    }).then((location) => { 
- 
-			setLocation(location.data.file);
-      setStatus('success');
-			
-    })
-		.catch(error => {
-			setErrorMessage(error.message);
-		});
+    setStatus("loading");
+    setErrorMessage("");
+
+    nativeBridge
+      .saveImage({
+        url: imgUrl,
+      })
+      .then((location) => {
+        setLocation(location.data.file);
+        setStatus("success");
+      })
+      .catch((error) => {
+        setErrorMessage(error.message);
+      });
   };
 
   return (
@@ -47,7 +63,7 @@ const WatchLocationPanel = () => {
     >
       <NavBar
         onBack={() => {
-          navigate(-1);
+          goBack();
         }}
       >
         图片信息
@@ -86,12 +102,17 @@ const WatchLocationPanel = () => {
         )}
       </div>
       <div>
-        <Space wrap direction={'vertical'}>
-          <Image src={demoSrc} width={'100%'} height={'100%'} fit="fill" />
-          <Image src={demoSrc}width={'100%'} height={'100%'}fit="contain" />
-          <Image src={demoSrc}width={'100%'} height={'100%'}fit="cover" />
-          <Image src={demoSrc}width={'100%'} height={'100%'}fit="scale-down" />
-          <Image src={demoSrc}width={'100%'} height={'100%'}fit="none" />
+        <Space wrap direction={"vertical"}>
+          <Image src={demoSrc} width={"100%"} height={"100%"} fit="fill" />
+          <Image src={demoSrc2} width={"100%"} height={"100%"} fit="contain" />
+          <Image src={demoSrc3} width={"100%"} height={"100%"} fit="cover" />
+          <Image
+            src={demoSrc4}
+            width={"100%"}
+            height={"100%"}
+            fit="scale-down"
+          />
+          <Image src={bgImage} width={"100%"} height={"100%"} fit="fill" />
         </Space>
       </div>
     </div>

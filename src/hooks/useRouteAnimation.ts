@@ -177,7 +177,7 @@ export const useRouteAnimation = (options: RouteAnimationOptions = {}) => {
     enableGesture = true,
     animationDuration = 300,
     forwardAnimation = "page",
-    backwardAnimation = "fade",
+    backwardAnimation = "page-back",
   } = options;
 
   const location = useLocation();
@@ -267,6 +267,33 @@ export const useRouteAnimation = (options: RouteAnimationOptions = {}) => {
     [navigate, backwardAnimation]
   );
 
+  // 增强的前进函数
+  const push = useCallback(
+    (
+      to: string,
+      options?: {
+        replace?: boolean;
+        state?: any;
+        animation?: AnimationType;
+      }
+    ) => {
+      const pushAnimation = options?.animation || forwardAnimation;
+      console.log(`[预设前进] 目标: ${to}, 动画: ${pushAnimation}`);
+
+      // 先预设前进动画，再执行导航
+      manager.presetAnimation(pushAnimation, "forward");
+
+      // 稍微延迟执行，确保状态更新
+      setTimeout(() => {
+        navigate(to, {
+          replace: options?.replace,
+          state: options?.state,
+        });
+      }, 16);
+    },
+    [navigate, forwardAnimation]
+  );
+
   // 增强的导航函数
   const enhancedNavigate = useCallback(
     (
@@ -315,6 +342,7 @@ export const useRouteAnimation = (options: RouteAnimationOptions = {}) => {
     ...animationState,
     setAnimationType,
     enhancedNavigate,
+    push, // 新增：预设前进动画的导航函数
     goBack,
     enableGesture,
   };

@@ -39,7 +39,7 @@ const LocationPanel = () => {
 
   // 处理返回导航
   const handleGoBack = () => {
-    goBack("fade");
+    goBack();
   };
 
   return (

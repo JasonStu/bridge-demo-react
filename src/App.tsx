@@ -9,6 +9,10 @@ import AnimationController from "./components/AnimationController";
 import VConsole from "vconsole";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Button, NavBar } from "antd-mobile";
+import {
+  useRouteAnimation,
+ 
+} from "./hooks/useRouteAnimation";
 
 // 导入桥接库
 import nativeBridge from "h5-native-bridge";
@@ -21,6 +25,7 @@ const HomePage = ({
   setShowAnimationController: (show: boolean) => void;
 }) => {
   const navigate = useNavigate();
+  const { push } = useRouteAnimation();
 
   const navigationItems = [
     {
@@ -119,7 +124,9 @@ const HomePage = ({
         {navigationItems.map((item) => (
           <div
             key={item.id}
-            onClick={() => navigate(item.path)}
+            onClick={() => {
+                push(item.path)
+            }}
             style={{
               background: "rgba(255, 255, 255, 0.95)",
               borderRadius: "16px",

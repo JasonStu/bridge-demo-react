@@ -30,7 +30,7 @@ export default defineConfig({
     outDir: "dist", // 默认输出目录
     assetsDir: "assets", // 静态资源目录
     emptyOutDir: true, // 清空输出目录,
-    assetsInlineLimit: 1024 * 1024, // 1MB（内联所有小文件）
+    assetsInlineLimit: 1024 * 1024*1024, // 1MB（内联所有小文件）
     // 确保单页应用回退到 index.html
     rollupOptions: {
       input: {

@@ -3,7 +3,11 @@ import nativeBridge  from "h5-native-bridge";
 
 import { Button, NavBar, Space, Toast } from "antd-mobile";
 import { useNavigate } from "react-router-dom";
-
+import {
+  useRouteAnimation,
+  animationPresets,
+  getDeviceType,
+} from "../hooks/useRouteAnimation";
 
 const NavigateType = {
   Back: "Back", // 当前页返回
@@ -18,7 +22,7 @@ type NavigateType = (typeof NavigateType)[keyof typeof NavigateType];
 const NavigatePanel = () => {
   const navigate = useNavigate();
 
- 
+  const { goBack } = useRouteAnimation();
 
   const navMethod = async (type: NavigateType,url:string,data:any) => {
     try {
@@ -40,10 +44,10 @@ const NavigatePanel = () => {
     >
       <NavBar
         onBack={() => {
-          navigate(-1);
+          goBack();
         }}
       >
-        wifi信息
+        原生路由,H5路由跳转
       </NavBar>
       <Space justify="between" direction="vertical" block align="center">
         <Button
