@@ -39,17 +39,11 @@ export default defineConfig({
     },
   },
   resolve: {
-    alias: {
-      // 添加别名，确保能正确解析h5-native-bridge
-      "h5-native-bridge": resolve(
-        __dirname,
-        "../h5-native-bridge/dist/native-bridge.es.js"
-      ),
-    },
+ 
   },
   // 确保能正确解析非标准扩展名
   optimizeDeps: {
-    include: ["h5-native-bridge", "antd-mobile"],
+    include: ["h5-native-bridge", "antd-mobile",],
     esbuildOptions: {
       resolveExtensions: [".js", ".jsx", ".ts", ".tsx"],
     },
