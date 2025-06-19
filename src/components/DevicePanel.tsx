@@ -20,7 +20,12 @@ const DevicePanel = () => {
   const getDeviceInfo = () => {
     setStatus('loading');
     setErrorMessage('');
-   
+    // dd.device.geolocation.get({
+    //   targetAccuracy: 200,
+    //   coordinate: 1,
+    //   withReGeocode: false,
+    //   useCache: false
+    // })
  
     nativeBridge.getWifiList({
      
